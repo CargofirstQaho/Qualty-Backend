@@ -4,6 +4,7 @@ const express = require("express");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const connectDB = require("./config/database")
+const authRoutes = require("./routes/authentication/authRouter")
 
 
 const PORT = process.env.PORT || 3000;
@@ -20,15 +21,10 @@ app.use(cors({
 }
 )); 
 
-app.get("/test",(req,res)=>{
-  res.json({message:"testing api"})
-})
 app.use(express.json());
 app.use(cookieParser()); 
 
 app.use("/api/auth",authRoutes);
-app.use("/api/enquiries",enquiryRoutes);
-app.use("/api/bids",bidRoutes);
  
 const serverAndDBconnect = async () => {   
   try { 
