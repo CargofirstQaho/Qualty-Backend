@@ -121,7 +121,7 @@ const inspectionCompanySchema = new mongoose.Schema(
         required: true,
       },
       taxCertificate: {
-        type: String, // optional
+        type: String,
       },
       insuranceDocument: {
         type: String,
