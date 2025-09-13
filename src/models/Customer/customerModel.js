@@ -62,6 +62,7 @@ const customerSchema = new mongoose.Schema(
         },
       },
     },
+    
      resetPasswordToken: String,
     resetPasswordExpire: Date,
   },
