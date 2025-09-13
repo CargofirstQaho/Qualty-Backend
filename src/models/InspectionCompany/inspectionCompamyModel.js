@@ -78,7 +78,7 @@ const inspectionCompanySchema = new mongoose.Schema(
     },
     employeeCount: {
       type: String,
-      enum: ["1-10", "11-50", "51-200", "201-500", "500+"],
+      enum: ["1-10", "11-50", "51-100", "101-500", "501-1000"],
       required: true,
     },
     servicesOffered: {

@@ -6,7 +6,7 @@ const cors = require("cors");
 const connectDB = require("./config/database")
 const authRoutes = require("./routes/authentication/authRouter")
 const customerRoutes = require("./routes/customer/customerRouter")
-
+const inspectorRoutes = require("./routes/inspector/inspectorRouter")
 
 const PORT = process.env.PORT || 3000;
 const app = express();
@@ -27,6 +27,8 @@ app.use(cookieParser());
 
 app.use("/api/auth",authRoutes);
 app.use("/api/customer",customerRoutes);
+app.use("/api/inspector", inspectorRoutes);
+
  
 const serverAndDBconnect = async () => {   
   try { 

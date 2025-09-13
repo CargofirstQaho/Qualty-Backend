@@ -7,7 +7,11 @@ const inspectionEnquirySchema = new mongoose.Schema(
       ref: "Customer",
       required: true,
     },
-
+    confirmedBid: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Bid",
+      default: null,
+    },
     inspectionLocation: {
       type: String,
       required: true,
