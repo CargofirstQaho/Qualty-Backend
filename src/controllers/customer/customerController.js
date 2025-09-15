@@ -30,7 +30,27 @@ const raiseEnquiryController = async (req, res, next) => {
           "You must upload both Trade License and Import Export Certificate before raising an enquiry"
         )
       );
-    }  
+    }
+
+    const now = new Date();
+    const indiaTime = new Date(
+      now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+    );
+
+    const day = indiaTime.getDay();
+    const hour = indiaTime.getHours();
+
+    const isWeekday = day >= 1 && day <= 5;
+    const isBusinessHour = hour >= 9 && hour < 17;
+
+    if (!isWeekday || !isBusinessHour) {
+      return next(
+        errorHandler(
+          403,
+          "Enquiries can only be raised Monday to Friday between 9:00 AM and 5:00 PM IST"
+        )
+      );
+    }
 
     const { inspectionTypes, physicalParameters, chemicalParameters, ...rest } =
       req.body;
@@ -172,18 +192,23 @@ const updateCustomerDocumentsController = async (req, res, next) => {
       updates["documents.tradeLicense"] = req.files.tradeLicense[0].path;
     }
     if (req.files?.importExportCertificate?.[0]?.path) {
-      updates["documents.importExportCertificate"] = req.files.importExportCertificate[0].path;
+      updates["documents.importExportCertificate"] =
+        req.files.importExportCertificate[0].path;
     }
 
     if (Object.keys(updates).length === 0) {
       return next(errorHandler(400, "No documents uploaded"));
     }
 
-    const customer = await Customer.findById(req.user._id).select("documents publishRequirements");
+    const customer = await Customer.findById(req.user._id).select(
+      "documents publishRequirements"
+    );
 
-    const tradeLicense = updates["documents.tradeLicense"] || customer.documents?.tradeLicense;
+    const tradeLicense =
+      updates["documents.tradeLicense"] || customer.documents?.tradeLicense;
     const importExportCertificate =
-      updates["documents.importExportCertificate"] || customer.documents?.importExportCertificate;
+      updates["documents.importExportCertificate"] ||
+      customer.documents?.importExportCertificate;
 
     if (tradeLicense && importExportCertificate) {
       updates.publishRequirements = true;
@@ -206,13 +231,11 @@ const updateCustomerDocumentsController = async (req, res, next) => {
   }
 };
 
-
-
 module.exports = {
   raiseEnquiryController,
   getMyEnquiries,
   getBidsForEnquiry,
   confirmBid,
   cancelEnquiry,
-  updateCustomerDocumentsController
+  updateCustomerDocumentsController,
 };
