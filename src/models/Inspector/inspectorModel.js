@@ -116,7 +116,7 @@ const inspectorSchema = new mongoose.Schema(
         },
       },
     ],
-     resetPasswordToken: String,
+    resetPasswordToken: String,
     resetPasswordExpire: Date,
   },
   { timestamps: true }

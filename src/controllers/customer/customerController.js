@@ -55,6 +55,18 @@ const raiseEnquiryController = async (req, res, next) => {
     const { inspectionTypes, physicalParameters, chemicalParameters, ...rest } =
       req.body;
 
+    const isPhysical = inspectionTypes?.physical === true;
+    const isChemical = inspectionTypes?.chemical === true;
+
+    if (!isPhysical && !isChemical) {
+      return next(
+        errorHandler(
+          400,
+          "You must select at least one inspection type: physical or chemical"
+        )
+      );
+    }
+
     const enquiryData = {
       ...rest,
       customer: req.user._id,

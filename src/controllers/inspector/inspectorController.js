@@ -1,5 +1,6 @@
 const InspectionEnquiry = require("../../models/Customer/customerEnquiryForm");
 const Bid = require("../../models/Inspector/bidModel");
+const errorHandler = require("../../utils/errorHandler")
 
 const getAvailableEnquiries = async (req, res, next) => {
   try {
@@ -17,7 +18,7 @@ const getAvailableEnquiries = async (req, res, next) => {
   }
 };
 
-const placeOrUpdateBid = async (req, res, next) => {
+const placeBid = async (req, res, next) => {
   try {
     if (req.user.role !== "inspector") {
       return next(errorHandler(403, "Only inspectors can bid"));
@@ -51,7 +52,7 @@ const placeOrUpdateBid = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: "Bid placed/updated successfully",
+      message: "Bid placed successfully",
       bid,
     });
   } catch (error) {
@@ -80,7 +81,7 @@ const cancelBid = async (req, res, next) => {
 const getMyBids = async (req, res, next) => {
   try {
     const bids = await Bid.find({ inspector: req.user._id })
-      .populate("enquiry")
+      .populate("InspectionEnquiry")
       .sort({ createdAt: -1 });
 
     res.json({ success: true, bids });
@@ -138,7 +139,7 @@ const getLowestBidsPerEnquiry = async (req, res, next) => {
  
 module.exports = {
   getAvailableEnquiries,
-  placeOrUpdateBid,
+  placeBid,
   cancelBid,
   getMyBids,
   getLowestBidsPerEnquiry
