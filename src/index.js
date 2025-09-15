@@ -25,9 +25,9 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser()); 
 
-app.use("/api/auth",authRoutes);
-app.use("/api/customer",customerRoutes);
-app.use("/api/inspector", inspectorRoutes);
+app.use("/auth",authRoutes);
+app.use("/customer",customerRoutes);
+app.use("/inspector", inspectorRoutes);
 
  
 const serverAndDBconnect = async () => {   
