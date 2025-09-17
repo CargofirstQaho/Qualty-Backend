@@ -37,17 +37,15 @@ const raiseEnquiryController = async (req, res, next) => {
       now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
     );
 
-    const day = indiaTime.getDay();
     const hour = indiaTime.getHours();
 
-    const isWeekday = day >= 1 && day <= 5;
-    const isBusinessHour = hour >= 9 && hour < 17;
+    const isBusinessHour = hour >= 9 && hour < 23;
 
-    if (!isWeekday || !isBusinessHour) {
+    if (!isBusinessHour) {
       return next(
         errorHandler(
           403,
-          "Enquiries can only be raised Monday to Friday between 9:00 AM and 5:00 PM IST"
+          "Enquiries can only be raised between 9:00 AM and 11:00 PM IST"
         )
       );
     }
@@ -67,6 +65,9 @@ const raiseEnquiryController = async (req, res, next) => {
       );
     }
 
+    const customerBudget = rest.inspectionBudget;
+    const platformFee = Math.round(customerBudget * 0.3);
+
     const enquiryData = {
       ...rest,
       customer: req.user._id,
@@ -74,6 +75,7 @@ const raiseEnquiryController = async (req, res, next) => {
         physical: inspectionTypes?.physical || false,
         chemical: inspectionTypes?.chemical || false,
       },
+      platformFee,
     };
 
     if (inspectionTypes?.physical) {
@@ -86,10 +88,12 @@ const raiseEnquiryController = async (req, res, next) => {
 
     const newEnquiry = await InspectionEnquiry.create(enquiryData);
 
+    const { platformFee: _platformFee, ...sanitizedEnquiry } = newEnquiry.toObject();
+
     res.status(201).json({
       success: true,
       message: "Inspection enquiry raised successfully",
-      enquiry: newEnquiry,
+      enquiry: sanitizedEnquiry,
     });
   } catch (error) {
     next(errorHandler(500, "Failed to raise enquiry: " + error.message));
