@@ -17,6 +17,10 @@ const bidSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+     customerViewAmount: {
+      type: Number,
+      required: true,
+    },
     note: {
       type: String,
       maxlength: 1000,

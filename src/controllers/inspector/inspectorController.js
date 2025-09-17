@@ -1,6 +1,7 @@
 const InspectionEnquiry = require("../../models/Customer/customerEnquiryForm");
+const Inspector = require("../../models/Inspector/inspectorModel");
 const Bid = require("../../models/Inspector/bidModel");
-const errorHandler = require("../../utils/errorHandler")
+const errorHandler = require("../../utils/errorHandler");
 
 const getAvailableEnquiries = async (req, res, next) => {
   try {
@@ -12,7 +13,18 @@ const getAvailableEnquiries = async (req, res, next) => {
       status: "submitted",
     }).sort({ createdAt: -1 });
 
-    res.json({ success: true, enquiries });
+    const adjustedEnquiries = enquiries.map((enquiry) => {
+      const { platformFee: _, ...sanitized } = enquiry.toObject();
+      const inspectorViewAmount =
+        enquiry.inspectionBudget - enquiry.platformFee;
+
+      return {
+        ...sanitized,
+        inspectionBudget: inspectorViewAmount,
+      };
+    });
+
+    res.json({ success: true, enquiries: adjustedEnquiries });
   } catch (error) {
     next(errorHandler(500, "Failed to fetch enquiries: " + error.message));
   }
@@ -24,6 +36,44 @@ const placeBid = async (req, res, next) => {
       return next(errorHandler(403, "Only inspectors can bid"));
     }
 
+    const inspector = await Inspector.findById(req.user._id).select(
+      "acceptsRequests identityDocuments billingDetails"
+    );
+
+    if (!inspector) {
+      return next(errorHandler(404, "Inspector not found"));
+    }
+
+    if (inspector.acceptsRequests) {
+      const { aadhaarCard } = inspector.identityDocuments || {};
+      const { accountNumber, bankName, ifscCode } =
+        inspector.billingDetails || {};
+
+      const isMissing = (val) =>
+        !val || typeof val !== "string" || val.trim().length === 0;
+
+      if (
+        isMissing(aadhaarCard) ||
+        isMissing(accountNumber) ||
+        isMissing(bankName) ||
+        isMissing(ifscCode)
+      ) {
+        return next(
+          errorHandler(
+            403,
+            "You must submit Aadhaar and complete banking details before placing a bid"
+          )
+        );
+      }
+    } else {
+      return next(
+        errorHandler(
+          403,
+          "You must enable 'acceptsRequests' and submit required documents to place a bid"
+        )
+      );
+    }
+
     const { enquiryId } = req.params;
     const { amount, note } = req.body;
 
@@ -31,6 +81,9 @@ const placeBid = async (req, res, next) => {
     if (!enquiry || enquiry.status !== "submitted") {
       return next(errorHandler(404, "Enquiry not available for bidding"));
     }
+
+    const platformFee = enquiry.platformFee;
+    const customerViewAmount = amount + platformFee;
 
     let bid = await Bid.findOne({
       enquiry: enquiryId,
@@ -40,6 +93,7 @@ const placeBid = async (req, res, next) => {
     if (bid) {
       bid.amount = amount;
       bid.note = note;
+      bid.customerViewAmount = customerViewAmount;
       await bid.save();
     } else {
       bid = await Bid.create({
@@ -47,13 +101,22 @@ const placeBid = async (req, res, next) => {
         inspector: req.user._id,
         amount,
         note,
+        customerViewAmount,
       });
     }
+
+    const populatedBid = await Bid.findById(bid._id).populate(
+      "inspector",
+      "name email mobileNumber commodities inspectorType"
+    );
 
     res.status(200).json({
       success: true,
       message: "Bid placed successfully",
-      bid,
+      bid: {
+        amount: populatedBid.amount,
+        inspector: populatedBid.inspector,
+      }, 
     });
   } catch (error) {
     next(errorHandler(500, "Failed to place bid: " + error.message));
@@ -76,14 +139,13 @@ const cancelBid = async (req, res, next) => {
   } catch (error) {
     next(errorHandler(500, "Failed to cancel bid: " + error.message));
   }
-}; 
+};
 
 const getMyBids = async (req, res, next) => {
   try {
-    const bids = await Bid.find({ inspector: req.user._id })
-      .populate("InspectionEnquiry")
-      .sort({ createdAt: -1 });
-
+    const bids = await Bid.find({ inspector: req.user._id }).sort({
+      createdAt: -1,
+    });
     res.json({ success: true, bids });
   } catch (error) {
     next(errorHandler(500, "Failed to fetch bids: " + error.message));
@@ -94,25 +156,25 @@ const getLowestBidsPerEnquiry = async (req, res, next) => {
   try {
     const lowestBids = await Bid.aggregate([
       {
-        $match: { status: "active" }
+        $match: { status: "active" },
       },
       {
         $group: {
           _id: "$enquiry",
           lowestBidAmount: { $min: "$amount" },
-          bidCount: { $sum: 1 }
-        }
+          bidCount: { $sum: 1 },
+        },
       },
       {
         $lookup: {
           from: "inspectionenquiries",
           localField: "_id",
           foreignField: "_id",
-          as: "enquiryDetails"
-        }
+          as: "enquiryDetails",
+        },
       },
       {
-        $unwind: "$enquiryDetails"
+        $unwind: "$enquiryDetails",
       },
       {
         $project: {
@@ -122,25 +184,71 @@ const getLowestBidsPerEnquiry = async (req, res, next) => {
           location: "$enquiryDetails.inspectionLocation",
           country: "$enquiryDetails.country",
           lowestBidAmount: 1,
-          bidCount: 1
-        }
+          bidCount: 1,
+        },
       },
       {
-        $sort: { lowestBidAmount: 1 }
-      }
+        $sort: { lowestBidAmount: 1 },
+      },
     ]);
 
     res.json({ success: true, data: lowestBids });
   } catch (error) {
-    next(errorHandler(500, "Failed to aggregate lowest bids: " + error.message));
+    next(
+      errorHandler(500, "Failed to aggregate lowest bids: " + error.message)
+    );
   }
 };
 
- 
+const updateInspectorDocumentsController = async (req, res, next) => {
+  try {
+    if (req.user.role !== "inspector") {
+      return next(errorHandler(403, "Only inspectors can update documents"));
+    }
+
+    const updates = {};
+
+    if (req.files?.aadhaarCard?.[0]?.path) {
+      updates["identityDocuments.aadhaarCard"] = req.files.aadhaarCard[0].path;
+    }
+
+    const { accountNumber, bankName, ifscCode } = req.body;
+
+    if (accountNumber) updates["billingDetails.accountNumber"] = accountNumber;
+    if (bankName) updates["billingDetails.bankName"] = bankName;
+    if (ifscCode) updates["billingDetails.ifscCode"] = ifscCode;
+
+    const isComplete =
+      updates["identityDocuments.aadhaarCard"] &&
+      updates["billingDetails.accountNumber"] &&
+      updates["billingDetails.bankName"] &&
+      updates["billingDetails.ifscCode"];
+
+    if (isComplete) {
+      updates.acceptsRequests = true;
+    }
+
+    const updatedInspector = await Inspector.findByIdAndUpdate(
+      req.user._id,
+      { $set: updates },
+      { new: true, runValidators: true }
+    ).select("name email identityDocuments billingDetails acceptsRequests");
+
+    res.status(200).json({
+      success: true,
+      message: "Documents updated successfully",
+      inspector: updatedInspector,
+    });
+  } catch (error) {
+    next(errorHandler(500, "Failed to update documents: " + error.message));
+  }
+};
+
 module.exports = {
   getAvailableEnquiries,
   placeBid,
   cancelBid,
   getMyBids,
-  getLowestBidsPerEnquiry
+  getLowestBidsPerEnquiry,
+  updateInspectorDocumentsController,
 };

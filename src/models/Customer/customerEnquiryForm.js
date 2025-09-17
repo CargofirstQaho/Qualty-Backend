@@ -26,7 +26,6 @@ const inspectionEnquirySchema = new mongoose.Schema(
       enum: ["Low", "Medium", "High", "Highest"],
       default: "Medium",
     },
-
     commodityCategory: {
       type: String,
       required: true,
@@ -42,6 +41,10 @@ const inspectionEnquirySchema = new mongoose.Schema(
     inspectionBudget: {
       type: Number,
       default: 0,
+    },
+    platformFee: {
+      type: Number,
+      required: true,
     },
 
     inspectionDate: {
