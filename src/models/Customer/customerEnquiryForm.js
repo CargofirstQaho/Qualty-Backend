@@ -23,7 +23,7 @@ const inspectionEnquirySchema = new mongoose.Schema(
     },
     urgencyLevel: {
       type: String,
-      enum: ["Low", "Medium", "High", "Highest"],
+      enum: ["Low", "Medium", "High", "Highest"],  
       default: "Medium",
     },
     commodityCategory: {
@@ -73,7 +73,7 @@ const inspectionEnquirySchema = new mongoose.Schema(
     chemicalParameters: [
       {
         type: [String],
-        default:[]
+       default :[]
       },
     ],
 
