@@ -281,7 +281,7 @@ const signInController = async (req, res, next) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return next(errorHandler(401, "Invalid credentials"));
 
-    token = generateTokenAndCookie(res, user);
+    const token = await generateTokenAndCookie(res, user);
 
     const { password: _ignored, ...userDetails } = user._doc;
 

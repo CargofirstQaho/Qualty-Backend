@@ -11,13 +11,8 @@ const inspectorRoutes = require("./routes/inspector/inspectorRouter")
 const PORT = process.env.PORT || 3000;
 const app = express();
 
-const isProd = process.env.NODE_ENV === "production";
-const FRONTEND_URL = isProd
-  ? process.env.FRONTEND_URL_PROD
-  : process.env.FRONTEND_URL_DEV;
-
-app.use(cors({
-  origin:FRONTEND_URL,
+app.use(cors({ 
+  origin:process.env.FRONTEND_URL,
   credentials:true,
 }
 )); 
