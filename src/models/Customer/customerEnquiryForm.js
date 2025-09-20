@@ -72,13 +72,8 @@ const inspectionEnquirySchema = new mongoose.Schema(
 
     chemicalParameters: [
       {
-        type: String,
-        enum: [
-          "Pesticide residue analysis",
-          "Heavy metals testing",
-          "Nutritional content analysis",
-          "Microbiological testing",
-        ],
+        type: [String],
+        default:[]
       },
     ],
 

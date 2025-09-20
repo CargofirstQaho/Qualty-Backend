@@ -7,9 +7,11 @@ const connectDB = require("./config/database")
 const authRoutes = require("./routes/authentication/authRouter")
 const customerRoutes = require("./routes/customer/customerRouter")
 const inspectorRoutes = require("./routes/inspector/inspectorRouter")
+const paymentRoutes = require("./routes/payment/paymentRouter")
 
 const PORT = process.env.PORT || 3000;
 const app = express();
+
 
 app.use(cors({ 
   origin:process.env.FRONTEND_URL,
@@ -26,8 +28,8 @@ app.get("/test",(req,res)=>{
 app.use("/auth",authRoutes);
 app.use("/customer",customerRoutes);
 app.use("/inspector", inspectorRoutes);
+app.use("/payment", paymentRoutes);
 
- 
 const serverAndDBconnect = async () => {   
   try { 
     await connectDB();
