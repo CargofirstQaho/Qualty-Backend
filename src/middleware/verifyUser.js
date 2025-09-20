@@ -7,7 +7,6 @@ const InspectionCompany = require("../models/InspectionCompany/inspectionCompamy
 const verifyUser = async (req, res, next) => {
   try {
     const token = req.cookies?.token;
-    console.log(token)
 
     if (!token) {
       return next(errorHandler(401, "Unauthorized access. Please login"));
